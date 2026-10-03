@@ -20,6 +20,6 @@ ESP32 adalah mikrokontroler dengan Wi-Fi bawaan, ADC 12-bit, dan DAC 8-bit, sehi
 Praktikum ini membangun sistem kontrol tegangan berbasis ESP32 yang set point-nya dapat diubah melalui browser dan responsnya ditampilkan dalam grafik real-time. Plant yang dikendalikan adalah rangkaian low-pass RC. Kinerja kontroler dianalisis melalui error, overshoot, rise time, settling time, dan steady-state error. Saya memilih menggunakan controller PID. PID dipilih karena struktur sederhana, hanya membutuhkan tiga parameter, dan cukup untuk plant orde satu seperti rangkaian RC. 
 
 # Demo
-<iframe width="1383" height="607" src="https://www.youtube.com/embed/0_vxmcBBTgk" title="Demo ESP32 CONTROL SYSTEM" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+(https://img.youtube.com/vi/0_vxmcBBTgk/0.jpg)](https://www.youtube.com/watch?v=0_vxmcBBTgk)
 
 
