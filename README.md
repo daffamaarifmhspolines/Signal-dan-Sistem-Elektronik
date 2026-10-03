@@ -10,6 +10,8 @@ PROGRAM STUDI TEKNOLOGI REKAYASA KOMPUTER
 POLITEKNIK NEGERI SEMARANG
 2026/2027
 
+
+
 # Latar Belakang
 Sistem kontrol umpan balik (feedback control) banyak dipakai pada peralatan elektronik untuk menjaga suatu besaran, seperti tegangan, suhu, atau kecepatan, agar tetap sesuai nilai yang diinginkan. Pada sistem seperti ini, nilai keluaran diukur kembali, dibandingkan dengan nilai acuan (set point), dan selisihnya (error) dipakai oleh kontroler untuk menentukan sinyal kendali.
 
