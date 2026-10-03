@@ -1,7 +1,7 @@
 # ESP32 WEB-BASED INTELLIGENT CONTROL SYSTEM
 
 Disusun oleh:
-Daffa Armadhan Hidmi Ma’arif — 4.33.25.1.06
+Daffa Ma’arif — 4.33.25.1.06
 Kelas TI-2B / Semester Ganjil
 
 Dosen Pengampu: Tahan Prahara, S.T., M.Kom.
