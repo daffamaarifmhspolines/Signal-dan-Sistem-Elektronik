@@ -22,6 +22,13 @@ Praktikum ini membangun sistem kontrol tegangan berbasis ESP32 yang set point-ny
 # Web GUI
 ![GUI](./image_2026-10-03_235424880.png)
 
+# Rangkaian
+![Diagram](./image_2026-10-03_235454834.png)
+![Hasil](./image_2026-10-03_235502545.png)
+
+# Flowchart
+![Flowchart](./image_2026-10-03_235508148.png)
+
 # Demo
 [![Teks Alternatif](https://img.youtube.com/vi/0_vxmcBBTgk/0.jpg)](https://www.youtube.com/watch?v=0_vxmcBBTgk)
 
