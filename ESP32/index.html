@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32 Control System</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--tx:#1b2430;--mut:#6b7686;--bd:#d9dee6;--sp:#e8590c;--pv:#1971c2;--u:#2f9e44;--ac:#1971c2}
+:root[data-theme=dark]{--bg:#12161c;--card:#1b222b;--tx:#e6ebf2;--mut:#93a0b2;--bd:#2c3644;--sp:#ff922b;--pv:#4dabf7;--u:#69db7c;--ac:#4dabf7}
+*{box-sizing:border-box}
+body{margin:0;font:15px system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--bd);flex-wrap:wrap;gap:8px}
+h1{font-size:18px;margin:0}
+.mut{color:var(--mut);font-size:13px}
+main{max-width:1000px;margin:0 auto;padding:12px;display:grid;gap:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px}
+.card h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input,select,button{font:inherit;padding:8px 10px;border-radius:7px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+input[type=number]{width:90px}
+input[type=range]{flex:1;min-width:140px;padding:0}
+button{cursor:pointer;background:var(--ac);color:#fff;border:0;font-weight:600}
+button.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+button.r{background:#e03131}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.k{background:var(--bg);border-radius:8px;padding:8px 10px}
+.k b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.k span{font-size:12px;color:var(--mut)}
+canvas{width:100%;height:340px;display:block}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-top:6px}
+.leg i{display:inline-block;width:16px;height:3px;vertical-align:middle;margin-right:5px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#e03131;margin-right:5px}
+.dot.on{background:#2f9e44}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>ESP32 CONTROL SYSTEM</h1><div class="mut">Sinyal dan Sistem Kontrol Elektronik</div></div>
+  <div class="row mut"><span><span class="dot" id="conn"></span><span id="ipv">-</span></span>
+  <button class="s" id="theme">Dark mode</button></div>
+</header>
+<main>
+  <section class="card">
+    <h2>Set Point</h2>
+    <div class="row">
+      <input type="number" id="sp" step="0.05" min="0" max="3.3" value="1.00"> <b>V</b>
+      <button id="set">SET</button>
+      <input type="range" id="slider" min="0" max="3.3" step="0.05" value="1">
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="mut">Controller</label>
+      <select id="mode"><option>PID</option><option value="ADAPTIVE">ADAPTIVE (v1)</option><option value="ADAPTIVE2">ADAPTIVE2 (v2)</option><option value="OPEN">OPEN (tanpa kontrol)</option></select>
+      <label class="mut">Kp</label><input type="number" id="kp" step="0.05" min="0">
+      <label class="mut">Ki</label><input type="number" id="ki" step="0.05" min="0">
+      <label class="mut">Kd</label><input type="number" id="kd" step="0.05" min="0">
+      <button class="s" id="apply">Terapkan</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="run">START</button>
+      <button class="s" id="reset">RESET</button>
+      <a href="/api/csv"><button class="s" type="button">Download CSV</button></a>
+      <span class="mut" id="status">-</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Pembacaan Real-Time (500 ms)</h2>
+    <div class="g">
+      <div class="k"><span>Set Point</span><b id="vsp">-</b></div>
+      <div class="k"><span>ADC GPIO33</span><b id="vpv">-</b></div>
+      <div class="k"><span>Error</span><b id="ve">-</b></div>
+      <div class="k"><span>DAC GPIO25</span><b id="vu">-</b></div>
+      <div class="k"><span>Controller</span><b id="vm">-</b></div>
+      <div class="k"><span>Kp / Ki / Kd (efektif)</span><b id="vg" style="font-size:14px">-</b></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Grafik Set Point vs ADC</h2>
+    <canvas id="cv"></canvas>
+    <div class="leg">
+      <span><i style="background:var(--sp)"></i>Set Point</span>
+      <span><i style="background:var(--pv)"></i>ADC GPIO33</span>
+      <label><input type="checkbox" id="showU"> <i style="background:var(--u)"></i>Output DAC</label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Analisis Respons (langkah setpoint terakhir)</h2>
+    <div class="g">
+      <div class="k"><span>Lompatan SP</span><b id="m0">-</b></div>
+      <div class="k"><span>Overshoot Mp</span><b id="m1">-</b></div>
+      <div class="k"><span>Rise time 10-90%</span><b id="m2">-</b></div>
+      <div class="k"><span>Settling time</span><b id="m3">-</b></div>
+      <div class="k"><span>Steady-state error</span><b id="m4">-</b></div>
+    </div>
+    <div class="mut" style="margin-top:8px">Toleransi settling: &plusmn;2% SP (minimum 0,03 V). Ess = SP &minus; rata-rata 5 sampel terakhir (valid setelah settle).</div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const MAXN = 300, TS = 0.5;
+let H = [], lastN = -1, prevSp = null, step = null, busy = false, st = {}, inited = false;
+
+async function api(p){ const r = await fetch(p, {cache:'no-store'}); return r.json(); }
+
+// ---------- Metrik respons ----------
+function metrics(s){
+  const d = s.sp1 - s.sp0, ad = Math.abs(d), P = s.pts;
+  if (ad < 0.05 || P.length < 3) return null;
+  const sgn = Math.sign(d);
+  const peak = sgn > 0 ? Math.max(...P.map(p => p.pv)) : Math.min(...P.map(p => p.pv));
+  const Mp = s.sp1 > 0 ? Math.max(0, sgn * (peak - s.sp1) / s.sp1 * 100) : null;
+  const cross = lvl => {
+    for (let i = 1; i < P.length; i++){
+      const a = P[i-1], b = P[i];
+      if ((a.pv - lvl) * sgn < 0 && (b.pv - lvl) * sgn >= 0)
+        return a.t + (lvl - a.pv) / (b.pv - a.pv) * (b.t - a.t);
+    }
+    return null;
+  };
+  const t10 = cross(s.sp0 + 0.1 * d), t90 = cross(s.sp0 + 0.9 * d);
+  const tr = (t10 !== null && t90 !== null) ? t90 - t10 : null;
+  const tol = Math.max(0.02 * Math.abs(s.sp1), 0.03);
+  let lastOut = -1;
+  P.forEach((p, i) => { if (Math.abs(p.pv - s.sp1) > tol) lastOut = i; });
+  let ts = null, ess = null;
+  if (lastOut < P.length - 1 && P.length >= 10){
+    ts = (lastOut + 1) * TS;
+    const tail = P.slice(-5);
+    ess = s.sp1 - tail.reduce((a, p) => a + p.pv, 0) / tail.length;
+  }
+  return {d, Mp, tr, ts, ess};
+}
+const f = (v, n, u) => v === null ? '-' : v.toFixed(n) + u;
+
+function showMetrics(){
+  if (!step) return;
+  const m = metrics(step);
+  if (!m){ ['m0','m1','m2','m3','m4'].forEach(i => $(i).textContent = '-'); return; }
+  $('m0').textContent = step.sp0.toFixed(2) + ' → ' + step.sp1.toFixed(2) + ' V';
+  $('m1').textContent = f(m.Mp, 1, ' %');
+  $('m2').textContent = f(m.tr, 1, ' s');
+  $('m3').textContent = m.ts === null ? 'belum settle' : m.ts.toFixed(1) + ' s';
+  $('m4').textContent = f(m.ess, 3, ' V');
+}
+
+// ---------- Update dari ESP32 ----------
+function update(s){
+  st = s;
+  $('ipv').textContent = s.ip + ' (' + s.net + ')';
+  if (s.n === lastN) return;
+  lastN = s.n;
+
+  if (prevSp !== null && Math.abs(s.sp - prevSp) > 1e-6)
+    step = {sp0: s.pv, sp1: s.sp, pts: []};
+  prevSp = s.sp;
+  if (step) step.pts.push({t: step.pts.length * TS, pv: s.pv});
+
+  H.push({t: s.t, sp: s.sp, pv: s.pv, u: s.u});
+  if (H.length > MAXN) H.shift();
+
+  $('vsp').textContent = s.sp.toFixed(2) + ' V';
+  $('vpv').textContent = s.pv.toFixed(3) + ' V';
+  $('ve').textContent  = s.e.toFixed(3) + ' V';
+  $('vu').textContent  = (s.dac * 3.3 / 255).toFixed(2) + ' V';
+  $('vm').textContent  = s.mode;
+  $('vg').textContent  = s.ekp.toFixed(2) + ' / ' + s.eki.toFixed(2) + ' / ' + s.ekd.toFixed(2);
+  $('status').textContent = s.run ? 'Controller: RUNNING (' + s.mode + ')' : 'Controller: STOPPED (DAC = 0 V)';
+  $('run').textContent = s.run ? 'STOP' : 'START';
+  $('run').className = s.run ? 'r' : '';
+  $('conn').className = 'dot on';
+  if (!inited){
+    $('sp').value = s.sp.toFixed(2); $('slider').value = s.sp;
+    $('mode').value = s.mode; $('kp').value = s.kp; $('ki').value = s.ki; $('kd').value = s.kd;
+    inited = true;
+  }
+  showMetrics();
+  draw();
+}
+
+async function poll(){
+  if (busy) return; busy = true;
+  try { update(await api('/api/state')); } catch(e){ $('conn').className = 'dot'; }
+  busy = false;
+}
+
+// ---------- Grafik ----------
+function draw(){
+  const cv = $('cv'), dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, Hh = cv.clientHeight;
+  if (cv.width !== W * dpr){ cv.width = W * dpr; cv.height = Hh * dpr; }
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, Hh);
+  const css = getComputedStyle(document.documentElement);
+  const col = n => css.getPropertyValue(n).trim();
+  const L = 44, R = 10, T = 10, B = 26, w = W - L - R, h = Hh - T - B, YM = 3.5;
+  const X = i => L + (H.length < 2 ? 0 : i / (MAXN - 1) * w);
+  const Y = v => T + h - v / YM * h;
+  c.font = '12px system-ui'; c.fillStyle = col('--mut'); c.strokeStyle = col('--bd'); c.lineWidth = 1;
+  for (let v = 0; v <= 3.5; v += 0.5){
+    c.beginPath(); c.moveTo(L, Y(v)); c.lineTo(L + w, Y(v)); c.stroke();
+    c.textAlign = 'right'; c.fillText(v.toFixed(1), L - 6, Y(v) + 4);
+  }
+  c.textAlign = 'center'; c.fillText('Voltage (V)', 28, 12);
+  if (H.length > 1){
+    const t0 = H[0].t;   // slot pertama = H[0]; lebar penuh = (MAXN-1) sampel
+    for (let k = 0; k <= 5; k++){
+      const x = L + k / 5 * w; c.fillText((t0 + (MAXN - 1) * TS * k / 5).toFixed(0) + 's', x, Hh - 8);
+    }
+  }
+  const line = (key, color, dash, lw) => {
+    c.beginPath(); c.strokeStyle = color; c.lineWidth = lw; c.setLineDash(dash);
+    H.forEach((p, i) => i ? c.lineTo(X(i), Y(p[key])) : c.moveTo(X(i), Y(p[key])));
+    c.stroke(); c.setLineDash([]);
+  };
+  if ($('showU').checked) line('u', col('--u'), [2, 3], 1.5);
+  line('sp', col('--sp'), [6, 4], 2);
+  line('pv', col('--pv'), [], 2);
+}
+
+// ---------- Aksi tombol ----------
+function setSP(v){ v = Math.min(3.3, Math.max(0, parseFloat(v))); if (isNaN(v)) return;
+  $('sp').value = v.toFixed(2); $('slider').value = v;
+  api('/api/set?sp=' + v.toFixed(3)).then(update); }
+$('set').onclick = () => setSP($('sp').value);
+$('sp').onkeydown = e => { if (e.key === 'Enter') setSP($('sp').value); };
+$('slider').onchange = () => setSP($('slider').value);
+$('slider').oninput = () => $('sp').value = parseFloat($('slider').value).toFixed(2);
+$('apply').onclick = () => api('/api/cfg?mode=' + $('mode').value + '&kp=' + $('kp').value + '&ki=' + $('ki').value + '&kd=' + $('kd').value).then(update);
+$('run').onclick = () => api('/api/run?v=' + (st.run ? 0 : 1)).then(update);
+$('reset').onclick = () => { api('/api/reset').then(s => { H = []; step = null; prevSp = null; $('sp').value = '0.00'; $('slider').value = 0; update(s); }); };
+$('showU').onchange = draw;
+window.onresize = draw;
+$('theme').onclick = () => {
+  const r = document.documentElement, d = r.dataset.theme === 'dark';
+  r.dataset.theme = d ? 'light' : 'dark'; $('theme').textContent = d ? 'Dark mode' : 'Light mode'; draw();
+};
+if (matchMedia('(prefers-color-scheme: dark)').matches){ document.documentElement.dataset.theme = 'dark'; $('theme').textContent = 'Light mode'; }
+
+// ---------- Mulai ----------
+(async () => {
+  try {
+    const h = await api('/api/hist');
+    h.t.forEach((t, i) => H.push({t, sp: h.sp[i], pv: h.pv[i], u: h.u[i]}));
+  } catch(e){}
+  await poll();
+  setInterval(poll, 500);
+})();
+</script>
+</body>
+</html>
