@@ -19,8 +19,8 @@ from machine import Pin, ADC, DAC
 from array import array
 
 # ======================= KONFIGURASI =======================
-WIFI_SSID = "Maarif's Family"          # <-- ganti
-WIFI_PASS = "Daffa&Keisya"      # <-- ganti
+WIFI_SSID = "Nama Wifi"          # <-- ganti
+WIFI_PASS = "Password Wifi"      # <-- ganti
 AP_SSID = "ESP32-CTRL"           # dipakai jika gagal terhubung ke WiFi (mode Access Point)
 AP_PASS = "12345678"
 
